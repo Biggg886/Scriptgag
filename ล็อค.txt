@@ -3,14 +3,12 @@ local camera = workspace.CurrentCamera
 local UIS = game:GetService("UserInputService")
 local RS = game:GetService("RunService")
 
--- UI และปุ่มเลือกเป้าหมายเหมือนเดิม (ข้ามไปทำเหมือนก่อนหน้านี้)
--- ตัวแปรหลัก:
 local lockedTarget = nil
 local isLocked = false
 local toggleKey = Enum.KeyCode.G
 local espObjects = {}
 
--- ฟังก์ชันสร้าง ESP
+-- สร้าง ESP
 local function createESP(target)
     if espObjects[target] then espObjects[target]:Destroy() end
     if target.Character then
@@ -32,33 +30,48 @@ local function removeESP(target)
     end
 end
 
--- ปุ่มกด G เปิด/ปิดการล็อค
+-- เมื่อกดปุ่ม G เปิด/ปิดล็อค
 UIS.InputBegan:Connect(function(input, gpe)
     if not gpe and input.KeyCode == toggleKey then
         if lockedTarget then
             isLocked = not isLocked
             if isLocked then
-                camera.CameraType = Enum.CameraType.Scriptable -- กล้องถูกควบคุม
+                camera.CameraType = Enum.CameraType.Scriptable
             else
-                camera.CameraType = Enum.CameraType.Custom -- คืนค่ากล้องปกติ
+                camera.CameraType = Enum.CameraType.Custom
             end
         end
     end
 end)
 
--- ล็อคกล้องและหมุนตัวละคร
+-- ฟังก์ชันดึงกล้องไปหาผู้เล่นทันที
+local function snapCameraToTarget(target)
+    if target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+        local hrp = target.Character.HumanoidRootPart
+        camera.CameraType = Enum.CameraType.Scriptable
+        camera.CFrame = CFrame.new(camera.CFrame.Position, hrp.Position) -- มองเป้า
+        wait(0.2)
+        camera.CameraType = Enum.CameraType.Custom -- กลับปกติ
+    end
+end
+
+-- ลูปล็อคกล้อง + หมุนตัว
 RS.RenderStepped:Connect(function()
     if isLocked and lockedTarget and lockedTarget.Character and lockedTarget.Character:FindFirstChild("HumanoidRootPart") then
         local hrp = lockedTarget.Character.HumanoidRootPart
         local char = player.Character
         if char and char:FindFirstChild("HumanoidRootPart") then
-            -- หมุนตัวละครหันไปหาเป้าหมาย
             local myRoot = char.HumanoidRootPart
             myRoot.CFrame = CFrame.new(myRoot.Position, Vector3.new(hrp.Position.X, myRoot.Position.Y, hrp.Position.Z))
         end
-
-        -- ล็อคกล้องให้มองเป้า
         local camPos = camera.CFrame.Position
         camera.CFrame = CFrame.new(camPos, hrp.Position)
     end
 end)
+
+-- ✅ เวลาเลือกชื่อผู้เล่น
+local function onPlayerSelected(target)
+    lockedTarget = target
+    createESP(target)
+    snapCameraToTarget(target) -- ดึงกล้องไปมองทันที
+end
