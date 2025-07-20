@@ -1,0 +1,183 @@
+-- ✅ ระบบ AFK + Anti Kick + Lock Target UI + ESP
+
+local player = game.Players.LocalPlayer
+local camera = workspace.CurrentCamera
+local UIS = game:GetService("UserInputService")
+local RS = game:GetService("RunService")
+local VirtualUser = game:GetService("VirtualUser")
+
+--======================
+-- [AFK Overlay]
+--======================
+local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+screenGui.IgnoreGuiInset = true
+screenGui.ResetOnSpawn = false
+screenGui.DisplayOrder = 9999
+
+local blackFrame = Instance.new("Frame", screenGui)
+blackFrame.Size = UDim2.new(1, 0, 1, 0)
+blackFrame.Position = UDim2.new(0, 0, 0, 0)
+blackFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+blackFrame.BackgroundTransparency = 0
+blackFrame.ZIndex = 9999
+
+local afkLabel = Instance.new("TextLabel", blackFrame)
+afkLabel.Size = UDim2.new(1, 0, 1, 0)
+afkLabel.BackgroundTransparency = 1
+afkLabel.Text = "AFK"
+afkLabel.Font = Enum.Font.GothamBlack
+afkLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+afkLabel.TextScaled = true
+afkLabel.ZIndex = 10000
+
+local closeButton = Instance.new("TextButton", blackFrame)
+closeButton.Size = UDim2.new(0, 50, 0, 50)
+closeButton.Position = UDim2.new(1, -60, 0, 10)
+closeButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+closeButton.Text = "X"
+closeButton.Font = Enum.Font.GothamBold
+closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeButton.TextScaled = true
+closeButton.ZIndex = 10000
+
+_G.AFKStop = false
+closeButton.MouseButton1Click:Connect(function()
+    blackFrame.Visible = false
+    _G.AFKStop = true
+end)
+
+-- Anti AFK
+player.Idled:Connect(function()
+    if not _G.AFKStop then
+        VirtualUser:Button2Down(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
+        wait(1)
+        VirtualUser:Button2Up(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
+    end
+end)
+
+--======================
+-- [Lock Target System]
+--======================
+local mainGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+mainGui.IgnoreGuiInset = true
+mainGui.ResetOnSpawn = false
+
+local frame = Instance.new("Frame", mainGui)
+frame.Size = UDim2.new(0, 220, 0, 300)
+frame.Position = UDim2.new(0, 10, 0, 100)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.Active = true
+frame.Draggable = true
+
+local uiList = Instance.new("UIListLayout", frame)
+uiList.SortOrder = Enum.SortOrder.LayoutOrder
+
+local label = Instance.new("TextLabel", frame)
+label.Size = UDim2.new(1, 0, 0, 40)
+label.Text = "เลือกผู้เล่น"
+label.TextColor3 = Color3.new(1, 1, 1)
+label.BackgroundTransparency = 1
+
+local unlockButton = Instance.new("TextButton", frame)
+unlockButton.Size = UDim2.new(1, 0, 0, 40)
+unlockButton.Text = "ยกเลิกล็อค"
+unlockButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+unlockButton.TextColor3 = Color3.new(1, 1, 1)
+
+local toggleUIBtn = Instance.new("TextButton", mainGui)
+toggleUIBtn.Size = UDim2.new(0, 80, 0, 40)
+toggleUIBtn.Position = UDim2.new(0, 10, 0, 50)
+toggleUIBtn.Text = "เปิด/ปิด UI"
+toggleUIBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
+toggleUIBtn.TextColor3 = Color3.new(1, 1, 1)
+
+local lockedTarget = nil
+local isLocked = false
+local toggleKey = Enum.KeyCode.G
+local espObjects = {}
+
+-- สร้าง ESP
+local function createESP(target)
+    if espObjects[target] then espObjects[target]:Destroy() end
+    if target.Character then
+        local highlight = Instance.new("Highlight")
+        highlight.FillColor = Color3.fromRGB(255, 0, 0)
+        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+        highlight.FillTransparency = 0.5
+        highlight.OutlineTransparency = 0
+        highlight.Adornee = target.Character
+        highlight.Parent = target.Character
+        espObjects[target] = highlight
+    end
+end
+
+local function removeESP(target)
+    if espObjects[target] then
+        espObjects[target]:Destroy()
+        espObjects[target] = nil
+    end
+end
+
+-- รายชื่อผู้เล่น
+local function refreshPlayerList()
+    for _, v in pairs(frame:GetChildren()) do
+        if v:IsA("TextButton") and v ~= unlockButton then
+            v:Destroy()
+        end
+    end
+    for _, plr in pairs(game.Players:GetPlayers()) do
+        if plr ~= player then
+            local btn = Instance.new("TextButton", frame)
+            btn.Size = UDim2.new(1, 0, 0, 40)
+            btn.Text = plr.Name
+            btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+            btn.TextColor3 = Color3.new(1, 1, 1)
+            btn.MouseButton1Click:Connect(function()
+                lockedTarget = plr
+                createESP(plr)
+            end)
+        end
+    end
+end
+
+refreshPlayerList()
+game.Players.PlayerAdded:Connect(refreshPlayerList)
+game.Players.PlayerRemoving:Connect(function(plr)
+    removeESP(plr)
+    refreshPlayerList()
+end)
+
+unlockButton.MouseButton1Click:Connect(function()
+    isLocked = false
+    if lockedTarget then removeESP(lockedTarget) end
+    lockedTarget = nil
+end)
+
+toggleUIBtn.MouseButton1Click:Connect(function()
+    frame.Visible = not frame.Visible
+end)
+
+-- กด G เปิด/ปิดล็อค
+UIS.InputBegan:Connect(function(input, gpe)
+    if not gpe and input.KeyCode == toggleKey then
+        if lockedTarget then
+            isLocked = not isLocked
+        end
+    end
+end)
+
+-- ล็อคกล้อง + หมุนตัว
+RS.RenderStepped:Connect(function()
+    if isLocked and lockedTarget and lockedTarget.Character and lockedTarget.Character:FindFirstChild("HumanoidRootPart") then
+        local hrp = lockedTarget.Character.HumanoidRootPart
+        local rootPos = hrp.Position
+        local camPos = camera.CFrame.Position
+        camera.CFrame = CFrame.new(camPos, rootPos)
+
+        local char = player.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            local myRoot = char.HumanoidRootPart
+            myRoot.CFrame = CFrame.new(myRoot.Position, Vector3.new(rootPos.X, myRoot.Position.Y, rootPos.Z))
+        end
+    end
+end)
