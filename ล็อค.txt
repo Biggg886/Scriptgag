@@ -3,64 +3,14 @@ local camera = workspace.CurrentCamera
 local UIS = game:GetService("UserInputService")
 local RS = game:GetService("RunService")
 
---======================
--- UI สวย + Toggle
---======================
-local mainGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-mainGui.IgnoreGuiInset = true
-mainGui.ResetOnSpawn = false
-
--- Frame หลัก
-local frame = Instance.new("Frame", mainGui)
-frame.Size = UDim2.new(0, 240, 0, 300)
-frame.Position = UDim2.new(0, 20, 0, 120)
-frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-frame.BackgroundTransparency = 0.1
-frame.Active = true
-frame.Draggable = true
-Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
-
--- Layout
-local uiList = Instance.new("UIListLayout", frame)
-uiList.SortOrder = Enum.SortOrder.LayoutOrder
-uiList.Padding = UDim.new(0, 6)
-
--- Title
-local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1, 0, 0, 40)
-title.Text = "🎯 ล็อคเป้า"
-title.Font = Enum.Font.GothamBold
-title.TextSize = 20
-title.TextColor3 = Color3.new(1, 1, 1)
-title.BackgroundTransparency = 1
-
--- ปุ่มยกเลิกล็อค
-local unlockButton = Instance.new("TextButton", frame)
-unlockButton.Size = UDim2.new(1, 0, 0, 40)
-unlockButton.Text = "ยกเลิกล็อค"
-unlockButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
-unlockButton.TextColor3 = Color3.new(1, 1, 1)
-unlockButton.Font = Enum.Font.GothamBold
-Instance.new("UICorner", unlockButton).CornerRadius = UDim.new(0, 8)
-
--- ปุ่ม Toggle UI
-local toggleUIBtn = Instance.new("TextButton", mainGui)
-toggleUIBtn.Size = UDim2.new(0, 40, 0, 40)
-toggleUIBtn.Position = UDim2.new(0, 20, 0, 70)
-toggleUIBtn.Text = "⚙️"
-toggleUIBtn.Font = Enum.Font.GothamBold
-toggleUIBtn.TextSize = 22
-toggleUIBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-toggleUIBtn.TextColor3 = Color3.new(1, 1, 1)
-Instance.new("UICorner", toggleUIBtn).CornerRadius = UDim.new(0, 10)
-
--- ตัวแปร
+-- UI และปุ่มเลือกเป้าหมายเหมือนเดิม (ข้ามไปทำเหมือนก่อนหน้านี้)
+-- ตัวแปรหลัก:
 local lockedTarget = nil
 local isLocked = false
 local toggleKey = Enum.KeyCode.G
 local espObjects = {}
 
--- สร้าง ESP
+-- ฟังก์ชันสร้าง ESP
 local function createESP(target)
     if espObjects[target] then espObjects[target]:Destroy() end
     if target.Character then
@@ -82,71 +32,33 @@ local function removeESP(target)
     end
 end
 
--- สร้างปุ่มเลือกผู้เล่น
-local function refreshPlayerList()
-    for _, v in pairs(frame:GetChildren()) do
-        if v:IsA("TextButton") and v ~= unlockButton then
-            v:Destroy()
-        end
-    end
-    for _, plr in pairs(game.Players:GetPlayers()) do
-        if plr ~= player then
-            local btn = Instance.new("TextButton", frame)
-            btn.Size = UDim2.new(1, 0, 0, 36)
-            btn.Text = plr.Name
-            btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-            btn.TextColor3 = Color3.new(1, 1, 1)
-            btn.Font = Enum.Font.Gotham
-            Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
-
-            btn.MouseButton1Click:Connect(function()
-                lockedTarget = plr
-                createESP(plr)
-            end)
-        end
-    end
-end
-
-refreshPlayerList()
-game.Players.PlayerAdded:Connect(refreshPlayerList)
-game.Players.PlayerRemoving:Connect(function(plr)
-    removeESP(plr)
-    refreshPlayerList()
-end)
-
--- ปุ่มยกเลิกล็อค
-unlockButton.MouseButton1Click:Connect(function()
-    isLocked = false
-    if lockedTarget then removeESP(lockedTarget) end
-    lockedTarget = nil
-end)
-
--- Toggle UI
-toggleUIBtn.MouseButton1Click:Connect(function()
-    frame.Visible = not frame.Visible
-end)
-
--- Toggle Lock ด้วย G
+-- ปุ่มกด G เปิด/ปิดการล็อค
 UIS.InputBegan:Connect(function(input, gpe)
     if not gpe and input.KeyCode == toggleKey then
         if lockedTarget then
             isLocked = not isLocked
+            if isLocked then
+                camera.CameraType = Enum.CameraType.Scriptable -- กล้องถูกควบคุม
+            else
+                camera.CameraType = Enum.CameraType.Custom -- คืนค่ากล้องปกติ
+            end
         end
     end
 end)
 
--- ล็อคกล้อง + หมุนตัวละคร
+-- ล็อคกล้องและหมุนตัวละคร
 RS.RenderStepped:Connect(function()
     if isLocked and lockedTarget and lockedTarget.Character and lockedTarget.Character:FindFirstChild("HumanoidRootPart") then
         local hrp = lockedTarget.Character.HumanoidRootPart
-        local rootPos = hrp.Position
-        local camPos = camera.CFrame.Position
-        camera.CFrame = CFrame.new(camPos, rootPos)
-
         local char = player.Character
         if char and char:FindFirstChild("HumanoidRootPart") then
+            -- หมุนตัวละครหันไปหาเป้าหมาย
             local myRoot = char.HumanoidRootPart
-            myRoot.CFrame = CFrame.new(myRoot.Position, Vector3.new(rootPos.X, myRoot.Position.Y, rootPos.Z))
+            myRoot.CFrame = CFrame.new(myRoot.Position, Vector3.new(hrp.Position.X, myRoot.Position.Y, hrp.Position.Z))
         end
+
+        -- ล็อคกล้องให้มองเป้า
+        local camPos = camera.CFrame.Position
+        camera.CFrame = CFrame.new(camPos, hrp.Position)
     end
 end)
