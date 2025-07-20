@@ -1,96 +1,60 @@
--- ✅ ระบบ AFK + Anti Kick + Lock Target UI + ESP
-
 local player = game.Players.LocalPlayer
 local camera = workspace.CurrentCamera
 local UIS = game:GetService("UserInputService")
 local RS = game:GetService("RunService")
-local VirtualUser = game:GetService("VirtualUser")
 
 --======================
--- [AFK Overlay]
---======================
-local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-screenGui.IgnoreGuiInset = true
-screenGui.ResetOnSpawn = false
-screenGui.DisplayOrder = 9999
-
-local blackFrame = Instance.new("Frame", screenGui)
-blackFrame.Size = UDim2.new(1, 0, 1, 0)
-blackFrame.Position = UDim2.new(0, 0, 0, 0)
-blackFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-blackFrame.BackgroundTransparency = 0
-blackFrame.ZIndex = 9999
-
-local afkLabel = Instance.new("TextLabel", blackFrame)
-afkLabel.Size = UDim2.new(1, 0, 1, 0)
-afkLabel.BackgroundTransparency = 1
-afkLabel.Text = "AFK"
-afkLabel.Font = Enum.Font.GothamBlack
-afkLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-afkLabel.TextScaled = true
-afkLabel.ZIndex = 10000
-
-local closeButton = Instance.new("TextButton", blackFrame)
-closeButton.Size = UDim2.new(0, 50, 0, 50)
-closeButton.Position = UDim2.new(1, -60, 0, 10)
-closeButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-closeButton.Text = "X"
-closeButton.Font = Enum.Font.GothamBold
-closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeButton.TextScaled = true
-closeButton.ZIndex = 10000
-
-_G.AFKStop = false
-closeButton.MouseButton1Click:Connect(function()
-    blackFrame.Visible = false
-    _G.AFKStop = true
-end)
-
--- Anti AFK
-player.Idled:Connect(function()
-    if not _G.AFKStop then
-        VirtualUser:Button2Down(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
-        wait(1)
-        VirtualUser:Button2Up(Vector2.new(0,0),workspace.CurrentCamera.CFrame)
-    end
-end)
-
---======================
--- [Lock Target System]
+-- UI สวย + Toggle
 --======================
 local mainGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 mainGui.IgnoreGuiInset = true
 mainGui.ResetOnSpawn = false
 
+-- Frame หลัก
 local frame = Instance.new("Frame", mainGui)
-frame.Size = UDim2.new(0, 220, 0, 300)
-frame.Position = UDim2.new(0, 10, 0, 100)
-frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.Size = UDim2.new(0, 240, 0, 300)
+frame.Position = UDim2.new(0, 20, 0, 120)
+frame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+frame.BackgroundTransparency = 0.1
 frame.Active = true
 frame.Draggable = true
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
 
+-- Layout
 local uiList = Instance.new("UIListLayout", frame)
 uiList.SortOrder = Enum.SortOrder.LayoutOrder
+uiList.Padding = UDim.new(0, 6)
 
-local label = Instance.new("TextLabel", frame)
-label.Size = UDim2.new(1, 0, 0, 40)
-label.Text = "เลือกผู้เล่น"
-label.TextColor3 = Color3.new(1, 1, 1)
-label.BackgroundTransparency = 1
+-- Title
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1, 0, 0, 40)
+title.Text = "🎯 ล็อคเป้า"
+title.Font = Enum.Font.GothamBold
+title.TextSize = 20
+title.TextColor3 = Color3.new(1, 1, 1)
+title.BackgroundTransparency = 1
 
+-- ปุ่มยกเลิกล็อค
 local unlockButton = Instance.new("TextButton", frame)
 unlockButton.Size = UDim2.new(1, 0, 0, 40)
 unlockButton.Text = "ยกเลิกล็อค"
 unlockButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
 unlockButton.TextColor3 = Color3.new(1, 1, 1)
+unlockButton.Font = Enum.Font.GothamBold
+Instance.new("UICorner", unlockButton).CornerRadius = UDim.new(0, 8)
 
+-- ปุ่ม Toggle UI
 local toggleUIBtn = Instance.new("TextButton", mainGui)
-toggleUIBtn.Size = UDim2.new(0, 80, 0, 40)
-toggleUIBtn.Position = UDim2.new(0, 10, 0, 50)
-toggleUIBtn.Text = "เปิด/ปิด UI"
+toggleUIBtn.Size = UDim2.new(0, 40, 0, 40)
+toggleUIBtn.Position = UDim2.new(0, 20, 0, 70)
+toggleUIBtn.Text = "⚙️"
+toggleUIBtn.Font = Enum.Font.GothamBold
+toggleUIBtn.TextSize = 22
 toggleUIBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
 toggleUIBtn.TextColor3 = Color3.new(1, 1, 1)
+Instance.new("UICorner", toggleUIBtn).CornerRadius = UDim.new(0, 10)
 
+-- ตัวแปร
 local lockedTarget = nil
 local isLocked = false
 local toggleKey = Enum.KeyCode.G
@@ -118,7 +82,7 @@ local function removeESP(target)
     end
 end
 
--- รายชื่อผู้เล่น
+-- สร้างปุ่มเลือกผู้เล่น
 local function refreshPlayerList()
     for _, v in pairs(frame:GetChildren()) do
         if v:IsA("TextButton") and v ~= unlockButton then
@@ -128,10 +92,13 @@ local function refreshPlayerList()
     for _, plr in pairs(game.Players:GetPlayers()) do
         if plr ~= player then
             local btn = Instance.new("TextButton", frame)
-            btn.Size = UDim2.new(1, 0, 0, 40)
+            btn.Size = UDim2.new(1, 0, 0, 36)
             btn.Text = plr.Name
-            btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+            btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
             btn.TextColor3 = Color3.new(1, 1, 1)
+            btn.Font = Enum.Font.Gotham
+            Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+
             btn.MouseButton1Click:Connect(function()
                 lockedTarget = plr
                 createESP(plr)
@@ -147,17 +114,19 @@ game.Players.PlayerRemoving:Connect(function(plr)
     refreshPlayerList()
 end)
 
+-- ปุ่มยกเลิกล็อค
 unlockButton.MouseButton1Click:Connect(function()
     isLocked = false
     if lockedTarget then removeESP(lockedTarget) end
     lockedTarget = nil
 end)
 
+-- Toggle UI
 toggleUIBtn.MouseButton1Click:Connect(function()
     frame.Visible = not frame.Visible
 end)
 
--- กด G เปิด/ปิดล็อค
+-- Toggle Lock ด้วย G
 UIS.InputBegan:Connect(function(input, gpe)
     if not gpe and input.KeyCode == toggleKey then
         if lockedTarget then
@@ -166,7 +135,7 @@ UIS.InputBegan:Connect(function(input, gpe)
     end
 end)
 
--- ล็อคกล้อง + หมุนตัว
+-- ล็อคกล้อง + หมุนตัวละคร
 RS.RenderStepped:Connect(function()
     if isLocked and lockedTarget and lockedTarget.Character and lockedTarget.Character:FindFirstChild("HumanoidRootPart") then
         local hrp = lockedTarget.Character.HumanoidRootPart
